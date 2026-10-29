@@ -16,6 +16,31 @@ class ProviderNotAvailableError extends Error {
   }
 }
 
+const PERPLEXITY_INTEGRATION_HEADER = 'X-Pplx-Integration'
+
+/**
+ * Identify requests sent to the public Perplexity API with a default
+ * integration header, unless the caller already set one (any casing).
+ */
+function withPerplexityIntegrationHeader(
+  baseURL: string,
+  headers: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  let hostname: string
+  try {
+    hostname = new URL(baseURL).hostname.toLowerCase()
+  }
+  catch {
+    return headers
+  }
+  if (hostname !== 'api.perplexity.ai')
+    return headers
+  const name = PERPLEXITY_INTEGRATION_HEADER.toLowerCase()
+  if (headers && Object.keys(headers).some(key => key.toLowerCase() === name))
+    return headers
+  return { ...headers, [PERPLEXITY_INTEGRATION_HEADER]: 'ai-sdk-provider-env' }
+}
+
 /**
  * Interface for provider factory functions, used for dependency injection.
  *
@@ -272,9 +297,12 @@ export function createEnvProvider(
     const { baseURL, apiKey, compatible, headers, providerOptions } = config
 
     // Merge headers: defaults.headers as base, config-set headers override matching keys
-    const mergedHeaders = (defaultHeaders || headers)
-      ? { ...defaultHeaders, ...headers }
-      : undefined
+    const mergedHeaders = withPerplexityIntegrationHeader(
+      baseURL,
+      (defaultHeaders || headers)
+        ? { ...defaultHeaders, ...headers }
+        : undefined,
+    )
 
     const baseOpts = {
       ...providerOptions,

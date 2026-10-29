@@ -1057,6 +1057,54 @@ describe('envProvider', () => {
     })
   })
 
+  describe('perplexity integration header', () => {
+    it('should add X-Pplx-Integration for the perplexity preset', () => {
+      setEnv('PPLX_API_KEY', 'key')
+      setEnv('PPLX_PRESET', 'perplexity')
+
+      const provider = createEnvProvider(factories)
+      provider.languageModel('pplx/sonar')
+
+      expect(mockCreateOpenAICompatible).toHaveBeenCalledWith({
+        name: 'pplx',
+        baseURL: 'https://api.perplexity.ai',
+        apiKey: 'key',
+        headers: { 'X-Pplx-Integration': 'ai-sdk-provider-env' },
+      })
+    })
+
+    it('should keep a caller-supplied value in any casing', () => {
+      setEnv('PPLX_API_KEY', 'key')
+      setEnv('PPLX_PRESET', 'perplexity')
+      setEnv('PPLX_HEADERS', '{"x-pplx-integration":"my-app","X-Custom":"value"}')
+
+      const provider = createEnvProvider(factories)
+      provider.languageModel('pplx/sonar')
+
+      expect(mockCreateOpenAICompatible).toHaveBeenCalledWith({
+        name: 'pplx',
+        baseURL: 'https://api.perplexity.ai',
+        apiKey: 'key',
+        headers: { 'x-pplx-integration': 'my-app', 'X-Custom': 'value' },
+      })
+    })
+
+    it('should not add the header for a custom base URL', () => {
+      setEnv('PPLX_API_KEY', 'key')
+      setEnv('PPLX_PRESET', 'perplexity')
+      setEnv('PPLX_BASE_URL', 'https://api.perplexity.ai.example.com')
+
+      const provider = createEnvProvider(factories)
+      provider.languageModel('pplx/sonar')
+
+      expect(mockCreateOpenAICompatible).toHaveBeenCalledWith({
+        name: 'pplx',
+        baseURL: 'https://api.perplexity.ai.example.com',
+        apiKey: 'key',
+      })
+    })
+  })
+
   describe('preset auto-detect', () => {
     // Core Functionality
 
